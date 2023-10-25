@@ -6,7 +6,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
 
-from forms import UserAddForm, LoginForm, MessageForm
+from forms import UserAddForm, LoginForm, MessageForm, EditProfileForm
 from models import db, connect_db, User, Message
 
 CURR_USER_KEY = "curr_user"
@@ -208,17 +208,47 @@ def stop_following(follow_id):
 
     return redirect(f"/users/{g.user.id}/following")
 
-
 @app.route('/users/profile', methods=["GET", "POST"])
-def profile(username):
-    """Update profile for current user."""
+def profile():
+    if not g.user:
+        flash("You must be logged in to view your profile.", "danger")
+        return redirect('/login')
+    
+    edit_profile_form = EditProfileForm()
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        current_password = request.form.get('current_password')
 
-    user = User.query.filter_by(username=username).first()
-    if user:
-        return render_template('users/index.html', user=user)
-    else:
-        flash ('User not found', 'danger')
-        return redirect("/login")
+        if not (username or email):
+            flash("Please provide some information about yourself!", "warning")
+            return render_template('users/edit.html')
+
+        if username != g.user.username:
+            existing_user = User.query.filter_by(username=username).first()
+            if existing_user:
+                flash("That username already exists. Please choose another one.")
+                return render_template('users/edit.html')
+
+        if email != g.user.email:
+            existing_email = User.query.filter_by(email=email).first()
+            if existing_email:
+                flash("That email address has already been used by a different account.")
+                return render_template('users/edit.html')
+
+        # Check the password for confirmation
+        if not User.authenticate(g.user.username, current_password):
+            flash("Incorrect password. Changes not saved.", "danger")
+        else:
+            # Update user information in the database
+            g.user.username = username
+            g.user.email = email
+            db.session.commit()
+            flash("Profile updated successfully!", "success")
+
+        return redirect('/users/profile')
+
+    return render_template('users/edit.html', form=edit_profile_form)
 
 
 @app.route('/users/delete', methods=["POST"])
