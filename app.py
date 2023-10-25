@@ -5,6 +5,7 @@ from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
+
 from forms import UserAddForm, LoginForm, MessageForm
 from models import db, connect_db, User, Message
 
@@ -24,7 +25,6 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
 toolbar = DebugToolbarExtension(app)
 
 connect_db(app)
-
 
 ##############################################################################
 # User signup/login/logout
@@ -93,7 +93,7 @@ def signup():
 @app.route('/login', methods=["GET", "POST"])
 def login():
     """Handle user login."""
-
+    
     form = LoginForm()
 
     if form.validate_on_submit():
@@ -113,7 +113,6 @@ def login():
 @app.route('/logout')
 def logout():
     """Handle logout of user."""
-
     session.clear()
     flash("You have been logged out.", "success")
     return redirect('/login')
@@ -211,10 +210,15 @@ def stop_following(follow_id):
 
 
 @app.route('/users/profile', methods=["GET", "POST"])
-def profile():
+def profile(username):
     """Update profile for current user."""
 
-    # IMPLEMENT THIS
+    user = User.query.filter_by(username=username).first()
+    if user:
+        return render_template('users/index.html', user=user)
+    else:
+        flash ('User not found', 'danger')
+        return redirect("/login")
 
 
 @app.route('/users/delete', methods=["POST"])
