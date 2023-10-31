@@ -93,7 +93,7 @@ def signup():
 @app.route('/login', methods=["GET", "POST"])
 def login():
     """Handle user login."""
-    
+
     form = LoginForm()
 
     if form.validate_on_submit():
@@ -208,12 +208,13 @@ def stop_following(follow_id):
 
     return redirect(f"/users/{g.user.id}/following")
 
+
 @app.route('/users/profile', methods=["GET", "POST"])
 def profile():
     if not g.user:
         flash("You must be logged in to view your profile.", "danger")
         return redirect('/login')
-    
+
     edit_profile_form = EditProfileForm()
     if request.method == 'POST':
         username = request.form.get('username')
@@ -301,6 +302,34 @@ def messages_show(message_id):
     return render_template('messages/show.html', message=msg)
 
 
+@app.route('/users/like_or_unlike/<int:message_id>', methods=['POST'])
+def add_like(message_id):
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/login")
+
+    message = Message.query.get_or_404(message_id)
+
+    if message.user_id != g.user.id:
+        # Check if the user has already liked the message
+        if message not in g.user.likes:
+            g.user.likes.append(message)
+        else:
+            g.user.likes.remove(message)
+
+        db.session.commit()
+
+    return redirect("/")
+
+
+@app.route('/users/liked_warbles')
+def liked_warbles():
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/login")
+    return render_template('users/liked_warbles.html', liked_messages=g.user.likes)
+
+
 @app.route('/messages/<int:message_id>/delete', methods=["POST"])
 def messages_destroy(message_id):
     """Delete a message."""
@@ -318,34 +347,26 @@ def messages_destroy(message_id):
 
 ##############################################################################
 # Homepage and error pages
-
-
 @app.route('/')
 def homepage():
-    """Show homepage:
-
-    - anon users: no messages
-    - logged in: 100 most recent messages of followed_users
-    """
-
     if g.user:
         following_user_ids = [user.id for user in g.user.following]
 
         if following_user_ids:
             messages = (Message
-                    .query
-                    .filter(Message.user_id.in_(following_user_ids))
-                    .order_by(Message.timestamp.desc())
-                    .limit(100)
-                    .all())
+                        .query
+                        .filter(Message.user_id.in_(following_user_ids))
+                        .order_by(Message.timestamp.desc())
+                        .limit(100)
+                        .all())
         else:
             messages = []
 
-        return render_template('home.html', messages=messages)
+        liked_message_ids = [message.id for message in g.user.likes]
 
+        return render_template('home.html', messages=messages, liked_message_ids=liked_message_ids)
     else:
         return render_template('home-anon.html')
-
 
 ##############################################################################
 # Turn off all caching in Flask
@@ -353,6 +374,7 @@ def homepage():
 #   handled elsewhere)
 #
 # https://stackoverflow.com/questions/34066804/disabling-caching-in-flask
+
 
 @app.after_request
 def add_header(req):

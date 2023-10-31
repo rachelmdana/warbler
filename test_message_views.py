@@ -5,10 +5,11 @@
 #    FLASK_ENV=production python -m unittest test_message_views.py
 
 
+from app import app, CURR_USER_KEY
 import os
 from unittest import TestCase
 
-from models import db, connect_db, Message, User
+from models import db, Message, User
 
 # BEFORE we import our app, let's set an environmental variable
 # to use a different database for tests (we need to do this
@@ -20,7 +21,6 @@ os.environ['DATABASE_URL'] = "postgresql:///warbler-test"
 
 # Now we can import app
 
-from app import app, CURR_USER_KEY
 
 # Create our tables (we do this here, so we only create the tables
 # once for all tests --- in each test, we'll delete the data
@@ -71,3 +71,19 @@ class MessageViewTestCase(TestCase):
 
             msg = Message.query.one()
             self.assertEqual(msg.text, "Hello")
+
+    def tearDown(self):
+        """Clean up after each test."""
+        db.session.remove()
+        db.drop_all()
+
+    def test_view_message_page(self):
+        """Can view a single page of messages?"""
+        # Create some messages
+        message = Message(text="test message", user_id=1)
+        db.session.add(message)
+        db.session.commit()
+        # View them
+        # Use self.client.get here
+        response = self.client.get(f'/messages/{message.id}')
+        self.assertEqual(response.status_code, 200)
