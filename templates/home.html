@@ -53,7 +53,7 @@
             </div>
             <form method="POST" action="/users/like_or_unlike/{{ msg.id }}" id="messages-form">
               <button class="btn btn-sm {% if msg.id in liked_messages %}btn-primary{% else %}btn-secondary{% endif %}">
-                {% if msg.id in likes %}
+                {% if msg.id in liked_messages %}
                 Unlike
                 {% else %}
                 Like

@@ -12,6 +12,7 @@
             <a href="/users/{{ msg.user.id }}">@{{ msg.user.username }}</a>
             <span class="text-muted">{{ msg.timestamp.strftime('%d %B %Y') }}</span>
             <p>{{ msg.text }}</p>
+            <span class="like-count">{{ msg.likes | length }} Likes</span>
         </div>
     </li>
     {% endfor %}
